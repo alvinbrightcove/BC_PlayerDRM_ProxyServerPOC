@@ -4,11 +4,13 @@ const https = require('https');
 const fs = require('fs');
 let auth = require('./auth')
 let midstream = require('./midstreamcheck')
-const tokengenerator = require('./tokengenerator')
 let bodyParser = require('body-parser')
+let cors = require('cors')
+let app = express();
+const tokengenerator = require('./tokengenerator')
 const promise = require('promise');
 
-let app = express();
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
     extended: false
