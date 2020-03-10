@@ -33,7 +33,7 @@ app.post('/getlicense', (req, resp) => {
             .then(allowedzip => midstreamcheck.midstreamCheck(currentzip, allowedzip))
             .then(result => {
                 drmtoday.getAuthforDRMrequest(midstreamcheck.assetId)
-                .then(headers => drmtoday.getlicensefromDRMlicenseServer(headers.customData, headers.token, req.query.keyMessage))
+                .then(headers => drmtoday.getlicensefromDRMlicenseServer(headers.customData, headers.token, req.body.body))
                 .then(drmKey => resp.send(drmKey))
             }).catch(err => {
                 console.log(err)
