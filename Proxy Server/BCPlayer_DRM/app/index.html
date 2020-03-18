@@ -1,0 +1,120 @@
+<html>
+
+<head>
+</head>
+
+<body data-gr-c-s-loaded="true">
+  <div style="max-width: 960px;">
+    <video-js id="bgPlayerId" data-account="6114089510001" data-player="gijLa9lm" data-embed="default" controls=" "
+      data-video-id="" data-playlist-id="" data-application-id=" " class="vjs-fluid">
+    </video-js>
+  </div>
+  <script src="https://players.brightcove.net/6114089510001/gijLa9lm_default/index.min.js"></script>
+  <script src="https://players.brightcove.net/videojs-drm/5/videojs-drm.min.js"></script>
+  <script>
+    var player = videojs.getPlayer('bgPlayerId');
+    var systemIp;
+    window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;//compatibility for Firefox and chrome
+    var pc = new RTCPeerConnection({ iceServers: [] }), noop = function () { };
+    pc.createDataChannel('');
+    pc.createOffer(pc.setLocalDescription.bind(pc), noop);
+    pc.onicecandidate = function (ice) {
+      if (ice && ice.candidate && ice.candidate.candidate) {
+        var myIP = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/.exec(ice.candidate.candidate)[1];
+        systemIp = myIP;
+        pc.onicecandidate = noop;
+      }
+    };
+    var decodeB64ToUint8Array = function decodeB64ToUint8Array(b64Text) {
+      var decodedString = window.atob(b64Text);
+      var array = new Uint8Array(decodedString.length);
+      for (var i = 0; i < decodedString.length; i++) {
+        array[i] = decodedString.charCodeAt(i);
+      }
+      return array;
+    };
+    function hexdump(buffer, blockSize) {
+
+      if (typeof buffer === 'string') {
+        console.log("buffer is string");
+      } else if (buffer instanceof ArrayBuffer && buffer.byteLength !== undefined) {
+        console.log("buffer is ArrayBuffer");
+        buffer = String.fromCharCode.apply(String, [].slice.call(new Uint8Array(buffer)));
+      } else if (Array.isArray(buffer)) {
+        console.log("buffer is Array");
+        buffer = String.fromCharCode.apply(String, buffer);
+      } else if (buffer.constructor === Uint8Array) {
+        console.log("buffer is Uint8Array");
+        buffer = String.fromCharCode.apply(String, [].slice.call(buffer));
+      } else {
+        console.log("Error: buffer is unknown...");
+        return false;
+      }
+      blockSize = blockSize || 16;
+      var lines = [];
+      var hex = "0123456789ABCDEF";
+      for (var b = 0; b < buffer.length; b += blockSize) {
+        var block = buffer.slice(b, Math.min(b + blockSize, buffer.length));
+        var addr = ("0000" + b.toString(16)).slice(-4);
+        var codes = block.split('').map(function (ch) {
+          var code = ch.charCodeAt(0);
+          return " " + hex[(0xF0 & code) >> 4] + hex[0x0F & code];
+        }).join("");
+        codes += "   ".repeat(blockSize - block.length);
+        var chars = block.replace(/[\x00-\x1F\x20]/g, '.');
+        chars += " ".repeat(blockSize - block.length);
+        lines.push(addr + " " + codes + "  " + chars);
+      }
+      return lines.join("\n");
+    }
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      let bytes = new Uint8Array(buffer);
+      let len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+    player.ready(function () {
+      player.eme();
+      player.src({
+        src: 'https://demo.cf.castlabs.com/media/bbb_abr/Manifest_new.mpd',
+        type: 'application/dash+xml',
+        keySystems: {
+          'com.widevine.alpha': {
+            getLicense: function (emeOptions, keyMessage, callback) {
+              console.log(hexdump(keyMessage, 16));
+              let reqBody = {
+                ipaddress: systemIp,
+                accountId: '6114089510001',
+                videoId: '6133692125001',
+                body: arrayBufferToBase64(keyMessage)
+                // body: payload
+              };
+              videojs.xhr({
+                uri: 'http://localhost:3080/getlicense',
+                method: 'POST',
+                responseType: 'json',
+                body: JSON.stringify(reqBody),
+                headers: {
+                  'Content-type': 'application/json'
+                }
+              }, function (err, response, responseBody) {
+
+                if (err) {
+                  callback(err);
+                  return;
+                }
+                var lab = decodeB64ToUint8Array(responseBody.license);
+                callback(null, lab);
+              });
+            }
+          }
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>
