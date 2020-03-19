@@ -1,5 +1,6 @@
+const https = require('https');
 const promise = require('promise');
-let restapi = require('./restapi')
+let restapi = require('./restapi');
 
 NEUSTAR_ENDPOINT = 'http://neustar-gds-pbs.gri/gds/v1/ipinfo/'
 
