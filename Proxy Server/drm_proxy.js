@@ -4,6 +4,7 @@ const https = require('https');
 const fs = require('fs');
 let drmtoday = require('./drmtoday')
 let midstreamcheck = require('./midstreamcheck')
+let neustar = require('./neustar')
 let bodyParser = require('body-parser')
 const promise = require('promise');
 var cors = require('cors')
@@ -25,8 +26,9 @@ var httpServer = http.createServer(app);
 var httpsServer = https.createServer(options, app);
 
 app.post('/getlicense', (req, resp) => {
+    console.log("reqbody.body"+req.body.body)
     return new promise((resolve, reject) => {
-        midstreamcheck.getCurrentLocation(req.body.ipaddress)
+        neustar.getCurrentLocation(req.body.ipaddress)
         .then(currentzip => {
             this.currentzip = currentzip
             midstreamcheck.getPlaybackRights(req.body.videoId, req.body.accountId)
