@@ -57,7 +57,6 @@ let getAuthforDRMrequest = (assetId) => {
 
 let getlicensefromDRMlicenseServer = (custom_data, auth_token, keyMessage) => {
     return new promise((resolve, reject) => {
-        console.log("coming");
         url = DRM_TODAY_BASEURL
         method = 'POST'
         headers = {
