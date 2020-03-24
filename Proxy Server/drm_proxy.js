@@ -38,7 +38,7 @@ app.post('/getlicense', (req, resp) => {
     let reqBody = decodeBase64(req.body.body);
     let payload = new Uint8Array(reqBody);
     return new promise((resolve, reject) => {
-        neustar.getCurrentLocation(request.ipaddress)
+        neustar.getCurrentLocation(req.ip)
         .then(currentzip => {
             this.currentzip = currentzip
             midstreamcheck.getPlaybackRights(req.body.videoId, req.body.accountId)
