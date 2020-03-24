@@ -37,7 +37,6 @@ function decodeBase64(str) {
 app.post('/getlicense', (req, resp) => {
     let reqBody = decodeBase64(req.body.body);
     let payload = new Uint8Array(reqBody);
-    console.log("coming herreeeeeeee");
     return new promise((resolve, reject) => {
         neustar.getCurrentLocation(request.ipaddress)
         .then(currentzip => {
