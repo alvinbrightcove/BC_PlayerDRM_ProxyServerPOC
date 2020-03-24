@@ -12,7 +12,6 @@ let getAuthforDRMrequest = (assetId) => {
     return new promise((resolve, reject) => {
         var date = new Date();
         let expiration = date.getFullYear()+"-"+date.getMonth()+"-"+date.getDate()+"T"+date.getHours()+":"+date.getMinutes()+":"+(date.getSeconds()+5)+":"+date.getMilliseconds()+"Z";
-        parsedDate = new Date(Date.parse(d));
         var now = new Date;
         var utc_timestamp = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
             now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds(), now.getUTCMilliseconds());
