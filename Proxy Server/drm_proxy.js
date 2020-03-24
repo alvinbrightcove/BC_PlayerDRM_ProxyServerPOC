@@ -56,5 +56,5 @@ app.post('/getlicense', (req, resp) => {
 }).on("error", (err) => {
     console.log("Error: " + err.message);
 });
-httpServer.listen(3080);
-httpsServer.listen(3443);
+httpServer.listen(3080, '0.0.0.0');
+httpsServer.listen(3443, '0.0.0.0');
