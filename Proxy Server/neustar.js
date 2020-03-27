@@ -15,7 +15,7 @@ let getCurrentLocation = (ipaddress) => {
             var currentzip
             var loc = JSON.parse(response.body)
             currentzip = loc.ipinfo.Location.CityData["postal_code"]
-            console.log("\nCurrent zip code: " + currentzip+"\n");
+//             console.log("\nCurrent zip code: " + currentzip+"\n");
             return resolve(currentzip);
         }).catch(error => {
             return reject("Zip not resolved");
