@@ -9,7 +9,7 @@ let getPlaybackRights = (videoId, accountId) => {
     return new promise((resolve, reject) => {
         bc_tokengenerator.getAccessToken().then(accesstoken => {
             this.accesstoken = accesstoken
-            getPlaybackRightsId(videoId, accountId, accesstoken).then(playbackrightId =>{
+            getPlaybackRightsId(videoId, accountId, accesstoken).then(playbackrightId => {
                 method = 'GET'
                 url = BC_PLAYBACKRIGHTS_BASEURL + accountId + '/playback_rights/' + playbackrightId
                 headers = {
@@ -19,24 +19,31 @@ let getPlaybackRights = (videoId, accountId) => {
                 body = ''
                 restapi.callRestAPI(method, url, headers, body).then(response => {
                     resp = JSON.parse(response.body)
-                    allowedzip = []
-                    allowedzip = allowedzip.concat(resp.geo.allowed_zip_codes)
-                    // allowedzip = ['US-123456', 'US-456789', 'US-20147', 'US-987654']
-                    allowedzip_striped = []
-                    for (zip of allowedzip) {
-                        stripedzip = zip.replace('US-', '')
-                        allowedzip_striped.push(stripedzip)
-                    }
-                    return resolve(allowedzip_striped);
+                    timerestrictioncheck(resp).then(response => {
+                        allowedzip = []
+                        allowedzip = allowedzip.concat(resp.geo.allowed_zip_codes)
+                        allowedzip_striped = []
+                        for (zip of allowedzip) {
+                            stripedzip = zip.replace('US-', '')
+                            allowedzip_striped.push(stripedzip)
+                        }
+                        return resolve(allowedzip_striped);
+                    }).catch(error =>{
+                        return reject("This content is not authorised to play at this time");
+                    })
                 }).catch(error => {
                     return reject("Playback rights access failed");
                 })
-            })
+            }).catch(error => {
+                return reject("Playback rights id request failed");
+            });
+        }).catch(error => {
+        return reject("Auth token generation failed");
         });
     })
 }
 
-let getPlaybackRightsId = (videoId, accountId, accesstoken) =>{
+let getPlaybackRightsId = (videoId, accountId, accesstoken) => {
     return new promise((resolve, reject) => {
         method = 'GET'
         url = BC_CMSAPI_BASEURL + accountId + '/videos/' + videoId
@@ -48,10 +55,11 @@ let getPlaybackRightsId = (videoId, accountId, accesstoken) =>{
         restapi.callRestAPI(method, url, headers, body).then(response => {
             resp = JSON.parse(response.body)
             var playbackrightId = resp.playback_rights_id
+            // console.log("playback_rights_id=" + playbackrightId)
             var assetId = resp.reference_id
             module.exports.assetId = resp.reference_id
             return resolve(playbackrightId)
-        }).catch(error =>{
+        }).catch(error => {
             return reject("Playback rights id request failed");
         })
     })
@@ -71,4 +79,35 @@ let midstreamCheck = (currentzip, allowedzip) => {
     })
 }
 
-module.exports = {getPlaybackRights, midstreamCheck}
+let timerestrictioncheck = (rights) => {
+    return new promise((resolve, reject) => {
+        var now = new Date().getTime();
+        status = true
+        if (rights.start_time != undefined) {
+            start_time = rights.start_time
+            if (rights.end_time != undefined) {
+                end_time = rights.end_time
+                if (start_time <= now && now <= end_time) {
+                    status = true
+                } else {
+                    status = false
+                }
+            } else {
+                if (start_time <= now) {
+                    status = true
+                } else {
+                    status = false
+                }
+            }
+        }
+        if (status == true) {
+            console.log("\Time restriction check status: true\n")
+            return resolve(true);
+        } else {
+            console.log("\nTime restriction check status: false\n")
+            return reject("This content is not authorised to play at this time");
+        }
+    })
+}
+
+module.exports = { getPlaybackRights, midstreamCheck }
