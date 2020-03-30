@@ -96,6 +96,7 @@ var querystring = require('querystring');
 const promise = require('promise');
 let restapi = require('./restapi')
 const DRM_TODAY_BASEURL = 'https://lic.staging.drmtoday.com/license-proxy-widevine/cenc/';
+const DRM_TODAY_PLAYREADY_URL='https://lic.staging.drmtoday.com/license-proxy-headerauth/drmtoday/RightsManager.asmx';
 
 let getAuthforDRMrequest = (assetId) => {
     return new promise((resolve, reject) => {
@@ -165,5 +166,29 @@ let getlicensefromDRMlicenseServer = (custom_data, auth_token, keyMessage) => {
     })
 }
 
-module.exports = { getAuthforDRMrequest, getlicensefromDRMlicenseServer }
+let getPlayreadylicensefromDRMlicenseServer = (custom_data, auth_token, keyMessage) => {
+    return new promise((resolve, reject) => {
+        console.log("##### PLAY RAEDY after promise")
+        url = DRM_TODAY_PLAYREADY_URL
+        // method = 'POST'
+        headers = {
+            'Content-type': 'text/xml',
+          //  'Accept-Encoding': 'gzip, deflate, br',
+            'x-dt-auth-token': auth_token,
+            'x-dt-custom-data': custom_data
+        }
+        console.log("##### PLAY RAEDY before Rest Func")
+        restapi.callRestDRMAPI(url, headers, keyMessage).then(response => {
+            // var drmKey
+            // response.setEncoding('base64');
+            // drmKey = response.body
+            console.log("drmkey = "+response)
+            return resolve(response)
+        }).catch(error => {
+            return reject("DRM license request failed");
+        })
+    })
+}
+
+module.exports = { getAuthforDRMrequest, getlicensefromDRMlicenseServer, getPlayreadylicensefromDRMlicenseServer  }
 
