@@ -147,7 +147,7 @@ app.post('/getPlayreadylicense', (req, resp) => {
     //    })
     console.log("Req.body.body " +req.body.body)
     drmtoday.getAuthforDRMrequest()
-                           .then(headers => drmtoday.getlicensefromDRMlicenseServer(headers.customData, headers.token, req.body.body))
+                           .then(headers => drmtoday.getPlayreadylicensefromDRMlicenseServer(headers.customData, headers.token, req.body.body))
                               .then(drmKey => resp.send(drmKey))
    }).on("error", (err) => {
        console.log("Error: " + err.message);
