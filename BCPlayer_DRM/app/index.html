@@ -1,3 +1,136 @@
+<!-- <html>
+
+<head>
+</head>
+
+<body data-gr-c-s-loaded="true">
+  <div style="max-width: 960px;">
+    <video-js id="bgPlayerId" data-account="6114089510001" data-player="gijLa9lm" data-embed="default" controls=" "
+      data-video-id="" data-playlist-id="" data-application-id=" " class="vjs-fluid">
+    </video-js>
+  </div>
+  <script src="https://players.brightcove.net/6114089510001/gijLa9lm_default/index.min.js"></script>
+  <script src="https://players.brightcove.net/videojs-drm/5/videojs-drm.min.js"></script>
+  <script>
+    var player = videojs.getPlayer('bgPlayerId');
+    var systemIp;
+    window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;//compatibility for Firefox and chrome
+    var pc = new RTCPeerConnection({ iceServers: [] }), noop = function () { };
+    pc.createDataChannel('');
+    pc.createOffer(pc.setLocalDescription.bind(pc), noop);
+    pc.onicecandidate = function (ice) {
+      if (ice && ice.candidate && ice.candidate.candidate) {
+        var myIP = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/.exec(ice.candidate.candidate)[1];
+        systemIp = myIP;
+        pc.onicecandidate = noop;
+      }
+    };
+    var decodeB64ToUint8Array = function decodeB64ToUint8Array(b64Text) {
+      var decodedString = window.atob(b64Text);
+      var array = new Uint8Array(decodedString.length);
+      for (var i = 0; i < decodedString.length; i++) {
+        array[i] = decodedString.charCodeAt(i);
+      }
+      return array;
+    };
+    function hexdump(buffer, blockSize) {
+
+      if (typeof buffer === 'string') {
+        console.log("buffer is string");
+      } else if (buffer instanceof ArrayBuffer && buffer.byteLength !== undefined) {
+        console.log("buffer is ArrayBuffer");
+        buffer = String.fromCharCode.apply(String, [].slice.call(new Uint8Array(buffer)));
+      } else if (Array.isArray(buffer)) {
+        console.log("buffer is Array");
+        buffer = String.fromCharCode.apply(String, buffer);
+      } else if (buffer.constructor === Uint8Array) {
+        console.log("buffer is Uint8Array");
+        buffer = String.fromCharCode.apply(String, [].slice.call(buffer));
+      } else {
+        console.log("Error: buffer is unknown...");
+        return false;
+      }
+      blockSize = blockSize || 16;
+      var lines = [];
+      var hex = "0123456789ABCDEF";
+      for (var b = 0; b < buffer.length; b += blockSize) {
+        var block = buffer.slice(b, Math.min(b + blockSize, buffer.length));
+        var addr = ("0000" + b.toString(16)).slice(-4);
+        var codes = block.split('').map(function (ch) {
+          var code = ch.charCodeAt(0);
+          return " " + hex[(0xF0 & code) >> 4] + hex[0x0F & code];
+        }).join("");
+        codes += "   ".repeat(blockSize - block.length);
+        var chars = block.replace(/[\x00-\x1F\x20]/g, '.');
+        chars += " ".repeat(blockSize - block.length);
+        lines.push(addr + " " + codes + "  " + chars);
+      }
+      return lines.join("\n");
+    }
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      let bytes = new Uint8Array(buffer);
+      let len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+    player.ready(function () {
+      player.eme();
+      player.src({
+        src: 'https://demo.cf.castlabs.com/media/bbb_abr/Manifest_new.mpd',
+        type: 'application/dash+xml',
+        keySystems: {
+          'com.widevine.alpha': {
+            vendor: {
+              name: 'castlabs',
+              options: {
+                customDataIsB64: true,
+              }
+            },
+            getLicense: function (emeOptions, keyMessage, callback) {
+              //console.log(hexdump(keyMessage, 16));
+              let reqBody = {
+                ipaddress: systemIp,
+                accountId: '6114089510001',
+                videoId: '6133692125001',
+                // body: new TextDecoder().decode(keyMessage)
+                body: arrayBufferToBase64(keyMessage)
+                // body: payload
+              };
+              videojs.xhr({
+                uri: 'http://localhost:3080/getlicense/',
+                method: 'POST',
+                responseType: 'json',
+                body: JSON.stringify(reqBody),
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              }, function (err, response, responseBody) {
+
+                if (err) {
+                  callback(err);
+                  return;
+                }
+                var lab = decodeB64ToUint8Array(responseBody.license);
+                callback(null, lab);
+              });
+            }
+          }
+
+
+
+
+        }
+      });
+    });
+  </script>
+</body>
+
+</html> -->
+
+
 <html>
 
 <head>
@@ -23,6 +156,108 @@
       }
       return btoa(binary);
     }
+    var DEFAULT_KEY_MESSAGE_FORMAT = 'utf-16';
+    var DEFAULT_RESPONSE_FORMAT = 'utf-8';
+    var SOAP = 'http://schemas.xmlsoap.org/soap/envelope/';
+    function parseXmlFromBuffer(buffer, format) {
+      var view = format === DEFAULT_KEY_MESSAGE_FORMAT ? new Uint16Array(buffer) : new Uint8Array(buffer);
+      var text = String.fromCharCode.apply(null, view);
+      var parser = new window.DOMParser();
+      var xml = parser.parseFromString(text, 'application/xml');
+      return xml;
+    }
+    function parseKeyMessage(keyMessage, keyMessageFormat) {
+      if (keyMessageFormat === void 0) {
+        keyMessageFormat = DEFAULT_KEY_MESSAGE_FORMAT;
+      }
+
+      var xml = parseXmlFromBuffer(keyMessage, keyMessageFormat);
+      var headers = {
+        // Set a default content-type because some devices (e.g, LG SmartTVs)
+        // require content-type to be defined
+        'Content-Type': "text/xml; charset=" + keyMessageFormat
+      }; // The raw key message is the default request value.
+
+      var body = keyMessage;
+      var playReadyKeyMessage = xml.querySelector('PlayReadyKeyMessage');
+
+      if (!playReadyKeyMessage) {
+        return {
+          body: body
+        };
+      } // Parse headers out of the PlayReadyKeyMessage.
+
+
+      var names = playReadyKeyMessage.querySelectorAll('name');
+      var values = playReadyKeyMessage.querySelectorAll('value');
+
+      for (var i = 0; i < names.length; i++) {
+        headers[names[i].firstChild.textContent] = values[i].firstChild.textContent;
+      } // some versions of the PlayReady CDM return 'Content' instead of 'Content-Type'.
+      // this is NOT w3c conform and license servers may reject the request!
+      // -> rename it to proper w3c definition!
+
+
+      if (headers.hasOwnProperty('Content')) {
+        headers['Content-Type'] = headers.Content;
+        delete headers.Content;
+      } // Parse the license request body from the PlayReadyKeyMessage node.
+
+
+      var challenge = playReadyKeyMessage.querySelector('Challenge').firstChild.nodeValue;
+
+      if (challenge) {
+        body = window.atob(challenge);
+      }
+
+      return {
+        body: body
+      };
+    }
+
+    function parseErrorResponse(responseBody, responseFormat) {
+      if (responseFormat === void 0) {
+        responseFormat = DEFAULT_RESPONSE_FORMAT;
+      }
+
+      var xml = parseXmlFromBuffer(responseBody, responseFormat);
+      var faultstring = '';
+      var statusCode = '';
+      var message = '';
+      var idStart = -1;
+      var idEnd = -1;
+      var envelope = xml ? xml.getElementsByTagNameNS(SOAP, 'Envelope')[0] : null;
+      var body = envelope ? envelope.getElementsByTagNameNS(SOAP, 'Body')[0] : null;
+      var fault = body ? body.getElementsByTagNameNS(SOAP, 'Fault')[0] : null;
+      var detail = fault ? fault.getElementsByTagName('detail')[0] : null;
+      var exception = detail ? detail.getElementsByTagName('Exception')[0] : null;
+      var node = null;
+
+      if (!fault) {
+        return null;
+      }
+
+      node = fault.getElementsByTagName('faultstring')[0].firstChild;
+      faultstring = node ? node.nodeValue : null;
+
+      if (exception !== null) {
+        node = exception.getElementsByTagName('StatusCode')[0];
+        statusCode = node ? node.firstChild.nodeValue : null;
+        node = exception.getElementsByTagName('Message')[0];
+        message = node ? node.firstChild.nodeValue : null;
+        idStart = message ? message.lastIndexOf('[') + 1 : -1;
+        idEnd = message ? message.indexOf(']') : -1;
+        message = message ? message.substring(idStart, idEnd) : '';
+      }
+
+      var errorString = "code: " + statusCode + ", name: " + faultstring;
+
+      if (message) {
+        errorString += ", message: " + message;
+      }
+
+      return errorString;
+    }
 
     player.ready(function () {
       player.eme();
@@ -39,7 +274,7 @@
                 body: arrayBufferToBase64(keyMessage)
               };
               videojs.xhr({
-                uri: 'http://localhost:3080/getlicense',
+                uri: 'http://18.222.28.249:3082/getlicense',
                 method: 'POST',
                 responseType: 'json',
                 body: JSON.stringify(reqBody),
@@ -55,11 +290,42 @@
                 callback(null, lab);
               });
             }
+          },
+          'com.microsoft.playready': {
+      
+          getLicense: function getLicense(emeOptions, keyMessage, callback) {
+            var parsed = parseKeyMessage(keyMessage);
+            let reqBody = {
+                accountId: '6114089510001',
+                videoId: '6133692125001',
+                body: parsed.body
+              };
+           
+            console.log(parsed.body)
+            videojs.xhr({
+              uri: 'http://localhost:3080/getPlayreadylicense',
+              method: 'POST',
+              body: JSON.stringify(reqBody),
+              responseType: 'arraybuffer',
+              headers: {
+                  'Content-type': 'application/json'
+                }
+            }, function (err, response, responseBody) {
+              err = err || parseErrorResponse(responseBody);
+
+              if (err) {
+                callback(err);
+                return;
+              }
+
+              callback(null, responseBody);
+            });
           }
+        
         }
-      });
+      }
+    });
     });
   </script>
 </body>
-
 </html>
